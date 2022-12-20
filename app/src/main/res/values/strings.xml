@@ -1,0 +1,20 @@
+<resources>
+    <string name="app_name">Test App</string>
+    <string name="hexo">Hexoskin</string>
+    <string name="ritm">Ritmer</string>
+    <string name="dex">Глюкометр Dexcome</string>
+    <string name="scale">Smart весы</string>
+    <string name="watch">Smart часы</string>
+    <string name="multi">Универсальное устройство</string>
+    <string name="gluc_min_val">0</string>
+    <string name="gluc_max_val">1000</string>
+    <string name="gluc_frec">1:300</string>
+    <string name="dev">Device</string>
+    <string name="r_to_s">Ready to start</string>
+    <string name="param1">Parameter 1</string>
+    <string name="cur_sett">Current Settings</string>
+    <string name="phone_name">Имя устройства</string>
+    <string name="phone_addr">Адрес устройства</string>
+    <string name="start">Начать передачу данных</string>
+    <string name="sw_button"></string>
+</resources>
