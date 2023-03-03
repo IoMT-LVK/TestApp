@@ -28,8 +28,8 @@ class Activity2 : AppCompatActivity() {
 
     fun onClickGoStart(view: View) {
         val intent = Intent(this, Activity3::class.java)
-        var min1 = fastLayout.minVal1.text
-        var max1 = fastLayout.maxVal1.text
+        val min1 = fastLayout.minVal1.text
+        val max1 = fastLayout.maxVal1.text
         intent.putExtra("device", fastLayout.devName.text)
         intent.putExtra("vals", arrayOf(min1, max1))
         intent.putExtra("frec", fastLayout.freq1.text)
