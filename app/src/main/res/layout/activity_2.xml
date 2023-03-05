@@ -7,6 +7,125 @@
     android:layout_height="match_parent"
     tools:context=".Activity2">
 
+    <EditText
+        android:id="@+id/freq3"
+        android:layout_width="110dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:inputType="textPersonName"
+        app:layout_constraintBottom_toBottomOf="@+id/max_val3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@+id/max_val3"
+        app:layout_constraintTop_toTopOf="@+id/max_val3"
+        app:layout_constraintVertical_bias="1.0"
+        tools:ignore="SpeakableTextPresentCheck" />
+
+    <EditText
+        android:id="@+id/freq2"
+        android:layout_width="110dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:inputType="textPersonName"
+        app:layout_constraintBottom_toBottomOf="@+id/max_val2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@+id/max_val2"
+        app:layout_constraintTop_toTopOf="@+id/max_val2"
+        app:layout_constraintVertical_bias="1.0"
+        tools:ignore="SpeakableTextPresentCheck" />
+
+    <EditText
+        android:id="@+id/max_val3"
+        android:layout_width="60dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="32dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:hint="@string/gluc_max_val"
+        android:inputType="numberDecimal"
+        android:textColorHint="#757575"
+        app:layout_constraintBottom_toBottomOf="@+id/min_val3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@+id/min_val3"
+        app:layout_constraintTop_toTopOf="@+id/min_val3"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <EditText
+        android:id="@+id/max_val2"
+        android:layout_width="60dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="32dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:hint="@string/gluc_max_val"
+        android:inputType="numberDecimal"
+        android:textColorHint="#757575"
+        app:layout_constraintBottom_toBottomOf="@+id/min_val2"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toEndOf="@+id/min_val2"
+        app:layout_constraintTop_toTopOf="@+id/min_val2"
+        app:layout_constraintVertical_bias="0.0" />
+
+    <EditText
+        android:id="@+id/min_val3"
+        android:layout_width="60dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="32dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:hint="@string/gluc_min_val"
+        android:inputType="numberDecimal"
+        app:layout_constraintBottom_toBottomOf="@+id/param3"
+        app:layout_constraintStart_toEndOf="@+id/param3"
+        app:layout_constraintTop_toTopOf="@+id/param3"
+        app:layout_constraintVertical_bias="0.448" />
+
+    <EditText
+        android:id="@+id/min_val2"
+        android:layout_width="60dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="32dp"
+        android:autofillHints=""
+        android:ems="10"
+        android:hint="@string/gluc_min_val"
+        android:inputType="numberDecimal"
+        app:layout_constraintBottom_toBottomOf="@+id/param2"
+        app:layout_constraintStart_toEndOf="@+id/param2"
+        app:layout_constraintTop_toTopOf="@+id/param2" />
+
+    <TextView
+        android:id="@+id/param3"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="36dp"
+        android:text="@string/param3"
+        app:layout_constraintEnd_toEndOf="@+id/param2"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="@+id/param2"
+        app:layout_constraintTop_toBottomOf="@+id/param2" />
+
+    <TextView
+        android:id="@+id/param2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="36dp"
+        android:layout_marginTop="36dp"
+        android:text="@string/param2"
+        app:layout_constraintEnd_toEndOf="@+id/param1"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="@+id/param1"
+        app:layout_constraintTop_toBottomOf="@+id/param1" />
+
     <TextView
         android:id="@+id/devName"
         android:layout_width="wrap_content"
@@ -74,17 +193,19 @@
 
     <EditText
         android:id="@+id/freq1"
-        android:layout_width="130dp"
+        android:layout_width="110dp"
         android:layout_height="48dp"
         android:layout_marginStart="8dp"
+        android:autofillHints=""
         android:ems="10"
         android:inputType="textPersonName"
-        android:text="@string/gluc_frec"
         app:layout_constraintBottom_toBottomOf="@+id/max_val1"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toEndOf="@+id/max_val1"
         app:layout_constraintTop_toTopOf="@+id/max_val1"
         app:layout_constraintVertical_bias="1.0"
-        android:autofillHints="" />
+        tools:ignore="SpeakableTextPresentCheck" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

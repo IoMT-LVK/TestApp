@@ -4,26 +4,18 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.*
-import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanResult
-import android.bluetooth.le.ScanSettings
+import android.bluetooth.le.BluetoothLeAdvertiser
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.view.View
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.testapp.databinding.Activity3Binding
 import kotlinx.android.synthetic.main.activity_3.*
 
@@ -36,13 +28,30 @@ class Activity3 : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         fastLayout = Activity3Binding.inflate(layoutInflater)
         setContentView(fastLayout.root)
-        isScanning = false
-        setupRecyclerView()
+        isAdvertising = false
+        val txt = "Current Settings: " + intent.getStringExtra("device") +
+                "\n" + intent.getCharSequenceArrayExtra("param1")?.get(0) + ":\n\tminVal - " +
+                intent.getCharSequenceArrayExtra("param1")?.get(1) + "; maxVal - " +
+                intent.getCharSequenceArrayExtra("param1")?.get(2) + ";\n\tfrequency - " +
+                intent.getCharSequenceArrayExtra("param1")?.get(3) +
+                "\n" + intent.getCharSequenceArrayExtra("param2")?.get(0) + ":\n\tminVal - " +
+                intent.getCharSequenceArrayExtra("param2")?.get(1) + "; maxVal - " +
+                intent.getCharSequenceArrayExtra("param2")?.get(2) + ";\n\tfrequency - " +
+                intent.getCharSequenceArrayExtra("param2")?.get(3) +
+                "\n" + intent.getCharSequenceArrayExtra("param3")?.get(0) + ":\n\tminVal - " +
+                intent.getCharSequenceArrayExtra("param3")?.get(1) + "; maxVal - " +
+                intent.getCharSequenceArrayExtra("param3")?.get(2) + ";\n\tfrequency - " +
+                intent.getCharSequenceArrayExtra("param3")?.get(3)
+        fastLayout.curSett.text = txt
     }
 
     private val bluetoothAdapter: BluetoothAdapter by lazy {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothManager.adapter
+    }
+
+    private val bluetoothAdvertiser: BluetoothLeAdvertiser by lazy {
+        bluetoothAdapter.bluetoothLeAdvertiser
     }
 
     override fun onResume() {
@@ -73,20 +82,6 @@ class Activity3 : AppCompatActivity() {
         }
     }
 
-    private fun Context.hasPermission(permissionType: String): Boolean {
-        return ContextCompat.checkSelfPermission(this, permissionType) ==
-                PackageManager.PERMISSION_GRANTED
-    }
-
-    private fun Context.hasRequiredRuntimePermissions(): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            hasPermission(Manifest.permission.BLUETOOTH_SCAN) &&
-                    hasPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        } else {
-            hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
-    }
-
     private var isAdvertising = false
         set(value) {
             field = value
@@ -105,6 +100,20 @@ class Activity3 : AppCompatActivity() {
     private fun stopBleAdvertising() {
 
         isAdvertising = false
+    }
+
+    private fun Context.hasPermission(permissionType: String): Boolean {
+        return ContextCompat.checkSelfPermission(this, permissionType) ==
+                PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun Context.hasRequiredRuntimePermissions(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            hasPermission(Manifest.permission.BLUETOOTH_SCAN) &&
+                    hasPermission(Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
     }
 
     private fun Activity.requestRelevantRuntimePermissions() {
