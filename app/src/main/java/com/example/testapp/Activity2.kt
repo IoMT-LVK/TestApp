@@ -48,6 +48,20 @@ class Activity2 : AppCompatActivity() {
             fastLayout.maxVal3.hint = "4095"
             fastLayout.freq3.hint = "64:1"
         }
+        if (fastLayout.devName.text == "Универсальное устройство") {
+            fastLayout.param1.text = "Heart Rate"
+            fastLayout.minVal1.hint = "30"
+            fastLayout.maxVal1.hint = "220"
+            fastLayout.freq1.hint = "1:1"
+            fastLayout.param2.isVisible = false
+            fastLayout.minVal2.isVisible = false
+            fastLayout.maxVal2.isVisible = false
+            fastLayout.freq2.isVisible = false
+            fastLayout.param3.isVisible = false
+            fastLayout.minVal3.isVisible = false
+            fastLayout.maxVal3.isVisible = false
+            fastLayout.freq3.isVisible = false
+        }
     }
 
     fun onClickGoStart(view: View) {
@@ -56,18 +70,18 @@ class Activity2 : AppCompatActivity() {
                 fastLayout.minVal1.text,
                 fastLayout.maxVal1.text,
                 fastLayout.freq1.text )
-        val par2 = arrayOf(fastLayout.param2.text.replace("\n".toRegex(), " ") as CharSequence,
+        /**val par2 = arrayOf(fastLayout.param2.text.replace("\n".toRegex(), " ") as CharSequence,
                 fastLayout.minVal2.text,
                 fastLayout.maxVal2.text,
                 fastLayout.freq2.text )
         val par3 = arrayOf(fastLayout.param3.text.replace("\n".toRegex(), " ") as CharSequence,
                 fastLayout.minVal3.text,
                 fastLayout.maxVal3.text,
-                fastLayout.freq3.text )
+                fastLayout.freq3.text )*/
         intent.putExtra("device", fastLayout.devName.text)
         intent.putExtra("param1", par1)
-        intent.putExtra("param2", par2)
-        intent.putExtra("param3", par3)
+        //intent.putExtra("param2", par2)
+        //intent.putExtra("param3", par3)
         startActivity(intent)
     }
 }
