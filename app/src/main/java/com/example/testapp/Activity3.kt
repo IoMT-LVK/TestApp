@@ -22,7 +22,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
 import androidx.core.app.ActivityCompat
+import androidx.core.app.ActivityCompat.recreate
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.getSystemService
 import com.example.testapp.databinding.Activity3Binding
 import kotlinx.android.synthetic.main.activity_3.*
 import kotlinx.coroutines.delay
@@ -108,6 +110,12 @@ class Activity3 : AppCompatActivity() {
                 fastLayout.swButton.text = if (value) "Остановить работу" else "Начать работу"
             })
         }
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun stopServer() {
+        gattServer.close()
+    }
 
     fun onClickListener(view: View) {
         if (isAdvertising) {
