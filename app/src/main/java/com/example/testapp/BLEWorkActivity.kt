@@ -330,8 +330,7 @@ class BLEWorkActivity : AppCompatActivity() {
         Log.d("BLE", "Settings: ${minVal}, ${maxVal}, $freq")
         while(true) {
             delay (delay)
-            //if (connectedDevice == null || !isAdvertising) {
-            if (!isAdvertising) {
+            if (connectedDevice == null || !isAdvertising) {
                 Log.d("BLE", "ConnectedDevice ${connectedDevice}, Advertising ${isAdvertising}")
                 continue
             }
@@ -340,8 +339,8 @@ class BLEWorkActivity : AppCompatActivity() {
             char.value = newBytesByUUID[char.uuid]
             //readCharacteristic.getDescriptor(heartRateDescriptorUUID).value = newValueBytes
             Log.d("BLE", "Sending notification ${char.value}")
-            //val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
-            //Log.d("BLE", if (isNotified) { "Notification sent." } else { "Notification is not sent." })
+            val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
+            Log.d("BLE", if (isNotified) { "Notification sent." } else { "Notification is not sent." })
             val time = LocalDateTime.now()
             withContext(Dispatchers.IO) {
                 outputWriter.write("$time $name ${value}\n")
