@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".Activity3">
+    tools:context=".BLEWorkActivity">
 
     <TextView
         android:id="@+id/cur_sett"
@@ -24,6 +24,8 @@
         android:layout_marginTop="256dp"
         android:backgroundTint="@color/teal_700"
         android:buttonTint="@color/teal_700"
+        android:minWidth="48dp"
+        android:minHeight="48dp"
         android:onClick="onClickListener"
         android:text="@string/sw_button"
         app:layout_constraintEnd_toEndOf="@+id/cur_sett"
@@ -52,5 +54,18 @@
         android:text="@string/phone_addr"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <Button
+        android:id="@+id/share_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="100dp"
+        android:backgroundTint="@color/teal_200"
+        android:text="Share logs"
+        android:onClick="onClickShare"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/cur_sett"
+        app:layout_constraintStart_toStartOf="@+id/cur_sett"
+        app:layout_constraintTop_toBottomOf="@+id/sw_button" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

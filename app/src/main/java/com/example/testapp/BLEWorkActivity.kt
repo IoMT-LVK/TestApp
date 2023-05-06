@@ -12,66 +12,82 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.os.ParcelUuid
 import android.util.Log
 import android.view.View
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.annotation.RequiresPermission
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.app.ActivityCompat.recreate
 import androidx.core.content.ContextCompat
-import androidx.core.content.ContextCompat.getSystemService
-import com.example.testapp.databinding.Activity3Binding
-import kotlinx.android.synthetic.main.activity_3.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import androidx.core.content.FileProvider
+import com.example.testapp.configs.DeviceConfig
+import com.example.testapp.configs.Settings
+import com.example.testapp.databinding.BleWorkBinding
+import kotlinx.coroutines.*
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone.Companion.currentSystemDefault
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 import java.util.*
 
 private const val RUNTIME_PERMISSION_REQUEST_CODE = 2
 
-class Activity3 : AppCompatActivity() {
-    lateinit var fastLayout : Activity3Binding
+class BLEWorkActivity : AppCompatActivity() {
+    lateinit var fastLayout : BleWorkBinding
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        fastLayout = Activity3Binding.inflate(layoutInflater)
+        fastLayout = BleWorkBinding.inflate(layoutInflater)
         setContentView(fastLayout.root)
-        //TODO: заменить на dataclass
-        parameterList = mutableListOf(
-            intent.getCharSequenceArrayExtra("param1")?.get(0))
-        params[parameterList[0]] = mapOf(
-            "minVal" to intent.getCharSequenceArrayExtra("param1")?.get(1),
-            "maxVal" to intent.getCharSequenceArrayExtra("param1")?.get(2),
-            "frequency" to intent.getCharSequenceArrayExtra("param1")?.get(3))
-        val txt = "Current Settings: " + intent.getStringExtra("device") +
-                "\n" + parameterList[0] +
-                ":\n\tminVal - " + params[parameterList[0]]?.get("minVal") +
-                "; maxVal - " + params[parameterList[0]]?.get("maxVal") +
-                ";\n\tfrequency - " + params[parameterList[0]]?.get("frequency")
+        paramSettings = Json.decodeFromString(intent.getStringExtra("settings").toString())
+        var txt = "Current Settings: " + intent.getStringExtra("device")
+        for (sett in paramSettings) {
+            txt += "\n${sett.paramName}: \n\tminVal - ${sett.minVal}, maxVal - ${sett.maxVal},"
+            txt += "\n\tfrequency - ${sett.freq}"
+        }
         fastLayout.curSett.text = txt
+        gattTableSettings = Json.decodeFromString(intent.getStringExtra("config").toString())
+        charKeys = gattTableSettings.characteristics.keys.toList()
+        for (param in paramSettings) {
+            paramMap[param.paramName] = param
+        }
+        scope = CoroutineScope(Dispatchers.Default)
         startServer()
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onDestroy() {
-        super.onDestroy()
         stopServer()
+        scope.cancel()
+        Log.d("BLE", "Server closed, coroutines closed.")
+        super.onDestroy()
     }
 
     private lateinit var gattServer: BluetoothGattServer
-
-    private val heartRateServiceUUID: UUID = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
-    private val heartRateCharacteristicUUID: UUID = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
-    private val heartRateDescriptorUUID: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+    private lateinit var gattTableSettings: DeviceConfig
+    private lateinit var charKeys: List<String>
 
     private var connectedDevice: BluetoothDevice? = null
 
-    private var parameterList: MutableList<CharSequence?> = mutableListOf()
-    private val params: MutableMap<CharSequence?, Map<String, CharSequence?>> = mutableMapOf()
-    private var newValueBytes = byteArrayOf()
+    private var paramSettings: List<Settings> = listOf()
+    private var paramMap: MutableMap<String, Settings> = mutableMapOf()
+    private var newBytesByUUID: MutableMap<UUID, ByteArray> = mutableMapOf()
+
+    private lateinit var scope: CoroutineScope
+
+    lateinit var fileOutputStream: FileOutputStream
+    lateinit var outputWriter: OutputStreamWriter
+    private lateinit var fileName: String
+    private var fileExist = false
 
     private val bluetoothAdapter: BluetoothAdapter by lazy {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -106,40 +122,74 @@ class Activity3 : AppCompatActivity() {
         set(value) {
             field = value
             //runOnUiThread { fastLayout.swButton.text = if (value) "Остановить работу" else "Начать работу" }
-            this@Activity3.runOnUiThread(java.lang.Runnable {
+            this@BLEWorkActivity.runOnUiThread(java.lang.Runnable {
                 fastLayout.swButton.text = if (value) "Остановить работу" else "Начать работу"
             })
         }
-    }
-
-    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    private fun stopServer() {
-        gattServer.close()
-    }
 
     fun onClickListener(view: View) {
         if (isAdvertising) {
             stopBleAdvertising()
+            outputWriter.close()
+            fileOutputStream.close()
+            if (connectedDevice != null) {
+                gattServer.cancelConnection(connectedDevice)
+            }
+            fileExist = true
         } else {
+            if (fileExist) {
+                val file = getFileStreamPath(fileName)
+                file.delete()
+                fileExist = false
+            }
+            fileName = "${System.currentTimeMillis() / 1000}.txt"
+            fileOutputStream = openFileOutput(fileName, Context.MODE_PRIVATE)
+            Log.d("BLE", "File name: $fileName")
+            outputWriter = OutputStreamWriter(fileOutputStream)
             startBleAdvertising()
         }
+    }
+
+    fun onClickShare(view: View) {
+        if (!fileExist) {
+            return
+        }
+        val intent = Intent(Intent.ACTION_SEND)
+        intent.type = "text/*"
+        val file = getFileStreamPath(fileName)
+        val fileUri = FileProvider.getUriForFile(
+            this,
+            "com.example.testapp.fileprovider",
+            file
+        )
+        Log.d("BLE", "file length ${file.length()}")
+        intent.putExtra(Intent.EXTRA_STREAM, fileUri)
+        startActivity(Intent.createChooser(intent, "share $fileName with"))
+    }
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun newService(id: Int): BluetoothGattService {
+        val charConfig = gattTableSettings.characteristics[charKeys[id]]
+        val service = BluetoothGattService(
+            UUID.fromString(charConfig!!.serviceUuid),
+            BluetoothGattService.SERVICE_TYPE_PRIMARY,
+        )
+        val characteristic = BluetoothGattCharacteristic(
+            UUID.fromString(charConfig.characteristicUuid),
+            BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+            BluetoothGattCharacteristic.PERMISSION_READ,
+        )
+        service.addCharacteristic(characteristic)
+        newBytesByUUID[UUID.fromString(charConfig.characteristicUuid)] = byteArrayOf()
+        scope.launch { updateData(characteristic, charKeys[id]) }
+        return service
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun startServer() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        gattServer = bluetoothManager.openGattServer(this, gattServerCallback).also {
-            val heartRateService = BluetoothGattService(heartRateServiceUUID, BluetoothGattService.SERVICE_TYPE_PRIMARY)
-            val heartRateCharacteristic = BluetoothGattCharacteristic(
-                heartRateCharacteristicUUID,
-                BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ
-            )
-            val heartRateDescriptor = BluetoothGattDescriptor(heartRateDescriptorUUID, BluetoothGattDescriptor.PERMISSION_READ)
-            heartRateCharacteristic.addDescriptor(heartRateDescriptor)
-            heartRateService.addCharacteristic(heartRateCharacteristic)
-            it.addService(heartRateService)
-        }
+        gattServer = bluetoothManager.openGattServer(this, gattServerCallback)
+        gattServer.addService(newService(0))
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -149,10 +199,15 @@ class Activity3 : AppCompatActivity() {
 
     private val gattServerCallback: BluetoothGattServerCallback = object: BluetoothGattServerCallback() {
         private val debugTag: String = "GattServer"
+        private var i: Int = 1
 
         //Callback indicating when a remote device has been connected or disconnected.
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        override fun onConnectionStateChange(device: BluetoothDevice?, status: Int, newState: Int) {
+        override fun onConnectionStateChange(
+            device: BluetoothDevice?,
+            status: Int,
+            newState: Int
+        ) {
             super.onConnectionStateChange(device, status, newState)
             Log.d("BLE", "onConnectionStateChange $status -> $newState")
             when(newState) {
@@ -162,27 +217,40 @@ class Activity3 : AppCompatActivity() {
                     connectedDevice = device
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    "@string/phone_name".also { fastLayout.phoneName.text = it }
-                    "@string/phone_addr".also { fastLayout.phoneAddr.text = it }
+                    "Имя устройства".also { fastLayout.phoneName.text = it }
+                    "Адрес устройства".also { fastLayout.phoneAddr.text = it }
                     connectedDevice = null
                 }
             }
+            Log.d("BLE", "onConnectionStateChange: device ${connectedDevice}")
         }
 
         //Indicates whether a local service has been added successfully.
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
             Log.d("BLE", "Gatt server service was added.")
             super.onServiceAdded(status, service)
+            if (i < charKeys.size) {
+                gattServer.addService(newService(i))
+                i += 1
+            }
         }
 
         //A remote client has requested to read a local characteristic.
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        override fun onCharacteristicReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, characteristic: BluetoothGattCharacteristic?) {
+        override fun onCharacteristicReadRequest(
+            device: BluetoothDevice?,
+            requestId: Int,
+            offset: Int, characteristic:
+            BluetoothGattCharacteristic?
+        ) {
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic)
             Log.d("BLE", "READ called onCharacteristicReadRequest ${characteristic?.uuid ?: "UNDEFINED"}")
-            if (characteristic?.uuid == heartRateCharacteristicUUID) {
-                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, newValueBytes)
-            }
+            gattServer.sendResponse(
+                device, requestId,
+                BluetoothGatt.GATT_SUCCESS, 0,
+                newBytesByUUID[characteristic?.uuid],
+            )
         }
 
         //A remote client has requested to read a local descriptor.
@@ -190,9 +258,9 @@ class Activity3 : AppCompatActivity() {
         override fun onDescriptorReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, descriptor: BluetoothGattDescriptor?) {
             super.onDescriptorReadRequest(device, requestId, offset, descriptor)
             Log.d("BLE", "READ called onDescriptorReadRequest ${descriptor?.uuid ?: "UNDEFINED"}")
-            if (descriptor?.uuid == heartRateDescriptorUUID) {
+            /**if (descriptor?.uuid == heartRateDescriptorUUID) {
                 gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, newValueBytes)
-            }
+            }*/
         }
 
         //Callback invoked when a notification or indication has been sent to a remote device.
@@ -216,62 +284,70 @@ class Activity3 : AppCompatActivity() {
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun startBleAdvertising() {
         if (!hasRequiredRuntimePermissions()) { requestRelevantRuntimePermissions() }
-        bluetoothAdvertiser.let {
-            val settings = AdvertiseSettings.Builder()
-                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
-                .setConnectable(true)
-                .setTimeout(0)
-                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
-                .build()
+        else {
+            bluetoothAdvertiser.let {
+                val settings = AdvertiseSettings.Builder()
+                    .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+                    .setConnectable(true)
+                    .setTimeout(0)
+                    .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+                    .build()
 
-            val data = AdvertiseData.Builder()
-                .setIncludeDeviceName(true)
-                .setIncludeTxPowerLevel(false)
-                .addServiceUuid(ParcelUuid(heartRateServiceUUID))
-                .build()
+                val data = AdvertiseData.Builder()
+                    .setIncludeDeviceName(true)
+                    .setIncludeTxPowerLevel(false)
+                    .build()
 
-            it.startAdvertising(settings, data, advertiseCallback)
+                it.startAdvertising(settings, data, advertiseCallback)
+            }
+            Log.d("BLE", "Successful advertising")
+            isAdvertising = true
         }
-        Log.d("BLE", "Successful advertising")
-        isAdvertising = true
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun stopBleAdvertising() {
         bluetoothAdvertiser.stopAdvertising(advertiseCallback)
+        Log.d("BLE", "Stop advertising")
         isAdvertising = false
     }
 
-    private fun updateData() {
-        val debugTag = "DataSender"
-        if (connectedDevice == null) {
-            Log.d("BLE", "No device is connected.")
-            return
-        }
-        Log.d(debugTag, "Attempting to get characteristic.")
-        val readCharacteristic = gattServer
-            .getService(heartRateServiceUUID)
-            .getCharacteristic(heartRateCharacteristicUUID)
-        val minVal = params[parameterList[0]]?.get("minVal").toString().toInt()
-        val maxVal = params[parameterList[0]]?.get("maxVal").toString().toInt()
-        val freq = params[parameterList[0]]?.get("frequency").toString().split(':')
-        val delay: Long = freq[1].toLong() / freq[0].toLong() // n раз : m сек
-        Log.d("BLE", "Characteristic got.")
-        object: Thread() {
-            @Suppress("DEPRECATION")
-            @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-            override fun run() {
-                while(isAdvertising) {
-                    newValueBytes = byteArrayOf((minVal..maxVal).random().toByte())
-                    readCharacteristic.value = newValueBytes
-                    readCharacteristic.getDescriptor(heartRateDescriptorUUID).value = newValueBytes
-                    Log.d(debugTag, "Sending notification ${readCharacteristic.value}")
-                    val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, readCharacteristic, false)
-                    Log.d("BLE", if (isNotified) { "Notification sent." } else { "Notification is not sent." })
-                    runBlocking { delay (delay) }
-                }
+    private fun LocalDateTime.Companion.now() = Clock.System.now().toLocalDateTime(currentSystemDefault())
+
+    @Suppress("DEPRECATION")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private suspend fun updateData(
+        char: BluetoothGattCharacteristic,
+        name: String
+    ) {
+        Log.d("BLE", "Attempting to get characteristic.")
+        val prettyName = gattTableSettings.characteristics[name]!!.prettyName
+        val minVal = paramMap[prettyName]!!.minVal
+        val maxVal = paramMap[prettyName]!!.maxVal
+        val freq = paramMap[prettyName]!!.freq.split(':') // f[0] раз : f[1] сек
+        val delay: Long = (freq[1].toLong() * 1000L) / freq[0].toLong() // каждые (f[1]/f[0]) сек
+        Log.d("BLE", "Characteristic $prettyName got.")
+        Log.d("BLE", "Settings: ${minVal}, ${maxVal}, $freq")
+        while(true) {
+            delay (delay)
+            //if (connectedDevice == null || !isAdvertising) {
+            if (!isAdvertising) {
+                Log.d("BLE", "ConnectedDevice ${connectedDevice}, Advertising ${isAdvertising}")
+                continue
             }
-        }.start()
+            val value = (minVal..maxVal).random()
+            newBytesByUUID[char.uuid] = byteArrayOf(value.toByte())
+            char.value = newBytesByUUID[char.uuid]
+            //readCharacteristic.getDescriptor(heartRateDescriptorUUID).value = newValueBytes
+            Log.d("BLE", "Sending notification ${char.value}")
+            //val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
+            //Log.d("BLE", if (isNotified) { "Notification sent." } else { "Notification is not sent." })
+            val time = LocalDateTime.now()
+            withContext(Dispatchers.IO) {
+                outputWriter.write("$time $name ${value}\n")
+            }
+            Log.d("BLE", "$time $name ${value}\n")
+        }
     }
 
     private fun Context.hasPermission(permissionType: String): Boolean {
@@ -286,7 +362,7 @@ class Activity3 : AppCompatActivity() {
                     hasPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
         } else {
             hasPermission(Manifest.permission.ACCESS_FINE_LOCATION) &&
-                    hasPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+                    hasPermission(Manifest.permission.BLUETOOTH_ADMIN)
         }
     }
 
@@ -315,8 +391,9 @@ class Activity3 : AppCompatActivity() {
                 setCancelable(false)
                 setPositiveButton(android.R.string.ok) { dialog, which ->
                     ActivityCompat.requestPermissions(
-                        this@Activity3,
-                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                        this@BLEWorkActivity,
+                        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.BLUETOOTH_ADMIN),
                         RUNTIME_PERMISSION_REQUEST_CODE
                     )
                 }
@@ -339,7 +416,7 @@ class Activity3 : AppCompatActivity() {
                 setCancelable(false)
                 setPositiveButton(android.R.string.ok) { dialog, which ->
                     ActivityCompat.requestPermissions(
-                        this@Activity3,
+                        this@BLEWorkActivity,
                         arrayOf(
                             Manifest.permission.BLUETOOTH_SCAN,
                             Manifest.permission.BLUETOOTH_CONNECT,
@@ -379,7 +456,7 @@ class Activity3 : AppCompatActivity() {
                         requestRelevantRuntimePermissions()
                     }
                     allGranted && hasRequiredRuntimePermissions() -> {
-                        Log.d("permissions", "OK!")
+                        Log.d("BLE", "Permissions OK!")
                         startBleAdvertising()
                     }
                     else -> {

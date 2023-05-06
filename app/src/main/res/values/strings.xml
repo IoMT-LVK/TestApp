@@ -19,4 +19,8 @@
     <string name="sw_button"></string>
     <string name="param2">Parameter 2</string>
     <string name="param3">Parameter 3</string>
+    <string name="title_activity_universal_device">UniversalDeviceActivity</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
 </resources>
