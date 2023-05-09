@@ -7,7 +7,6 @@ import android.util.Log
 import android.view.View
 import android.widget.Button
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.example.testapp.databinding.UniversalDeviceBinding
 import com.example.testapp.configs.DeviceConfig
 import com.example.testapp.view_adapters.ConfigAdapter
@@ -29,7 +28,7 @@ internal const val API_V1 = "/api/v1"
 internal const val TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLzEiLCJpc3MiOiJJb01UX1JFU1QiLCJleHAiOjE2OTA2MjQwNTQsImlhdCI6MTY4Mjg0ODA1NH0.vYB5NplD_yT1C1jUSgzCktjweUYwtTIV2eZVvbYfbiY"
 
 class UniversalDeviceActivity : AppCompatActivity() {
-    lateinit var fastLayout : UniversalDeviceBinding
+    private lateinit var fastLayout : UniversalDeviceBinding
 
     private var configs: List<DeviceConfig>? = null
 
@@ -85,7 +84,7 @@ class UniversalDeviceActivity : AppCompatActivity() {
                 break
             }
         }
-        var charNames: ArrayList<String> = arrayListOf()
+        val charNames: ArrayList<String> = arrayListOf()
         for (char in chosenDevice!!.characteristics.values) {
             charNames.add(char.prettyName)
         }
