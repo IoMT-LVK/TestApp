@@ -72,7 +72,7 @@ class ValSettingsActivity : AppCompatActivity() {
 
     private fun getSettings(rv: RecyclerView): List<Settings> {
         val itemCount = rv.adapter!!.itemCount
-        var ans: MutableList<Settings> = mutableListOf()
+        val ans: MutableList<Settings> = mutableListOf()
         for (i in 0 until itemCount) {
             val holder = rv.findViewHolderForAdapterPosition(i)
             if (holder != null) {
@@ -86,7 +86,7 @@ class ValSettingsActivity : AppCompatActivity() {
         return ans
     }
 
-    fun onClickGoStart(view: View) {
+    fun onClickGoStart(@Suppress("UNUSED_PARAMETER") view: View) {
         val intent = Intent(this, BLEWorkActivity::class.java)
         intent.putExtra("device", fastLayout.devName.text)
         intent.putExtra("config", config)
