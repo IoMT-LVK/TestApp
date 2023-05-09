@@ -33,7 +33,6 @@ import kotlinx.datetime.TimeZone.Companion.currentSystemDefault
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.util.*
@@ -43,6 +42,7 @@ private const val RUNTIME_PERMISSION_REQUEST_CODE = 2
 class BLEWorkActivity : AppCompatActivity() {
     lateinit var fastLayout : BleWorkBinding
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +64,7 @@ class BLEWorkActivity : AppCompatActivity() {
         startServer()
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onDestroy() {
         stopServer()
@@ -84,8 +85,8 @@ class BLEWorkActivity : AppCompatActivity() {
 
     private lateinit var scope: CoroutineScope
 
-    lateinit var fileOutputStream: FileOutputStream
-    lateinit var outputWriter: OutputStreamWriter
+    private lateinit var fileOutputStream: FileOutputStream
+    private lateinit var outputWriter: OutputStreamWriter
     private lateinit var fileName: String
     private var fileExist = false
 
@@ -121,13 +122,20 @@ class BLEWorkActivity : AppCompatActivity() {
     private var isAdvertising = false
         set(value) {
             field = value
-            //runOnUiThread { fastLayout.swButton.text = if (value) "Остановить работу" else "Начать работу" }
-            this@BLEWorkActivity.runOnUiThread(java.lang.Runnable {
+            this@BLEWorkActivity.runOnUiThread {
                 fastLayout.swButton.text = if (value) "Остановить работу" else "Начать работу"
-            })
+            }
         }
 
-    fun onClickListener(view: View) {
+    @RequiresApi(Build.VERSION_CODES.S)
+    @RequiresPermission(
+        allOf = [
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.BLUETOOTH_ADVERTISE,
+        ]
+    )
+    fun onClickListener(@Suppress("UNUSED_PARAMETER") view: View) {
         if (isAdvertising) {
             stopBleAdvertising()
             outputWriter.close()
@@ -150,7 +158,7 @@ class BLEWorkActivity : AppCompatActivity() {
         }
     }
 
-    fun onClickShare(view: View) {
+    fun onClickShare(@Suppress("UNUSED_PARAMETER") view: View) {
         if (!fileExist) {
             return
         }
@@ -167,6 +175,7 @@ class BLEWorkActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(intent, "share $fileName with"))
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun newService(id: Int): BluetoothGattService {
         val charConfig = gattTableSettings.characteristics[charKeys[id]]
@@ -185,6 +194,7 @@ class BLEWorkActivity : AppCompatActivity() {
         return service
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun startServer() {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
@@ -192,16 +202,17 @@ class BLEWorkActivity : AppCompatActivity() {
         gattServer.addService(newService(0))
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun stopServer() {
         gattServer.close()
     }
 
     private val gattServerCallback: BluetoothGattServerCallback = object: BluetoothGattServerCallback() {
-        private val debugTag: String = "GattServer"
         private var i: Int = 1
 
         //Callback indicating when a remote device has been connected or disconnected.
+        @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onConnectionStateChange(
             device: BluetoothDevice?,
@@ -222,10 +233,11 @@ class BLEWorkActivity : AppCompatActivity() {
                     connectedDevice = null
                 }
             }
-            Log.d("BLE", "onConnectionStateChange: device ${connectedDevice}")
+            Log.d("BLE", "onConnectionStateChange: device $connectedDevice")
         }
 
         //Indicates whether a local service has been added successfully.
+        @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onServiceAdded(status: Int, service: BluetoothGattService?) {
             Log.d("BLE", "Gatt server service was added.")
@@ -237,6 +249,7 @@ class BLEWorkActivity : AppCompatActivity() {
         }
 
         //A remote client has requested to read a local characteristic.
+        @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onCharacteristicReadRequest(
             device: BluetoothDevice?,
@@ -254,6 +267,7 @@ class BLEWorkActivity : AppCompatActivity() {
         }
 
         //A remote client has requested to read a local descriptor.
+        @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onDescriptorReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, descriptor: BluetoothGattDescriptor?) {
             super.onDescriptorReadRequest(device, requestId, offset, descriptor)
@@ -264,6 +278,7 @@ class BLEWorkActivity : AppCompatActivity() {
         }
 
         //Callback invoked when a notification or indication has been sent to a remote device.
+        @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onNotificationSent(device: BluetoothDevice?, status: Int) {
             super.onNotificationSent(device, status)
@@ -281,6 +296,7 @@ class BLEWorkActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun startBleAdvertising() {
         if (!hasRequiredRuntimePermissions()) { requestRelevantRuntimePermissions() }
@@ -305,6 +321,7 @@ class BLEWorkActivity : AppCompatActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun stopBleAdvertising() {
         bluetoothAdvertiser.stopAdvertising(advertiseCallback)
@@ -315,6 +332,7 @@ class BLEWorkActivity : AppCompatActivity() {
     private fun LocalDateTime.Companion.now() = Clock.System.now().toLocalDateTime(currentSystemDefault())
 
     @Suppress("DEPRECATION")
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private suspend fun updateData(
         char: BluetoothGattCharacteristic,
@@ -331,7 +349,7 @@ class BLEWorkActivity : AppCompatActivity() {
         while(true) {
             delay (delay)
             if (connectedDevice == null || !isAdvertising) {
-                Log.d("BLE", "ConnectedDevice ${connectedDevice}, Advertising ${isAdvertising}")
+                Log.d("BLE", "ConnectedDevice ${connectedDevice}, Advertising $isAdvertising")
                 continue
             }
             val value = (minVal..maxVal).random()
@@ -388,7 +406,7 @@ class BLEWorkActivity : AppCompatActivity() {
                         "доступ к местоположению для сканирования устройств BLE."
                 )
                 setCancelable(false)
-                setPositiveButton(android.R.string.ok) { dialog, which ->
+                setPositiveButton(android.R.string.ok) { _, _ ->
                     ActivityCompat.requestPermissions(
                         this@BLEWorkActivity,
                         arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
@@ -413,7 +431,7 @@ class BLEWorkActivity : AppCompatActivity() {
                             "доступ к Bluetooth для сканирования устройств BLE."
                 )
                 setCancelable(false)
-                setPositiveButton(android.R.string.ok) { dialog, which ->
+                setPositiveButton(android.R.string.ok) { _, _ ->
                     ActivityCompat.requestPermissions(
                         this@BLEWorkActivity,
                         arrayOf(
@@ -430,6 +448,7 @@ class BLEWorkActivity : AppCompatActivity() {
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     override fun onRequestPermissionsResult(
         requestCode: Int,
