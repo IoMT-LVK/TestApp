@@ -197,9 +197,12 @@ class BLEWorkActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun startServer() {
-        val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        gattServer = bluetoothManager.openGattServer(this, gattServerCallback)
-        gattServer.addService(newService(0))
+        if (!hasRequiredRuntimePermissions()) { requestRelevantRuntimePermissions() }
+        else {
+            val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+            gattServer = bluetoothManager.openGattServer(this, gattServerCallback)
+            gattServer.addService(newService(0))
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
@@ -299,23 +302,20 @@ class BLEWorkActivity : AppCompatActivity() {
     @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
     private fun startBleAdvertising() {
-        if (!hasRequiredRuntimePermissions()) { requestRelevantRuntimePermissions() }
-        else {
-            bluetoothAdvertiser.let {
-                val settings = AdvertiseSettings.Builder()
-                    .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
-                    .setConnectable(true)
-                    .setTimeout(0)
-                    .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
-                    .build()
+        bluetoothAdvertiser.let {
+            val settings = AdvertiseSettings.Builder()
+                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+                .setConnectable(true)
+                .setTimeout(0)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+                .build()
 
-                val data = AdvertiseData.Builder()
-                    .setIncludeDeviceName(true)
-                    .setIncludeTxPowerLevel(false)
-                    .build()
+            val data = AdvertiseData.Builder()
+                .setIncludeDeviceName(true)
+                .setIncludeTxPowerLevel(false)
+                .build()
 
-                it.startAdvertising(settings, data, advertiseCallback)
-            }
+            it.startAdvertising(settings, data, advertiseCallback)
             Log.d("BLE", "Successful advertising")
             isAdvertising = true
         }
@@ -449,7 +449,7 @@ class BLEWorkActivity : AppCompatActivity() {
 
 
     @RequiresApi(Build.VERSION_CODES.S)
-    @RequiresPermission(Manifest.permission.BLUETOOTH_ADVERTISE)
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -475,7 +475,7 @@ class BLEWorkActivity : AppCompatActivity() {
                     }
                     allGranted && hasRequiredRuntimePermissions() -> {
                         Log.d("BLE", "Permissions OK!")
-                        startBleAdvertising()
+                        startServer()
                     }
                     else -> {
                         // Unexpected scenario encountered when handling permissions
