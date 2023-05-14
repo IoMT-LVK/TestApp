@@ -194,7 +194,7 @@ class BLEWorkActivity : AppCompatActivity() {
         )
         val descriptor = BluetoothGattDescriptor(
             UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
-            BluetoothGattDescriptor.PERMISSION_READ
+            BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
         )
         characteristic.addDescriptor(descriptor)
         service.addCharacteristic(characteristic)
@@ -363,7 +363,7 @@ class BLEWorkActivity : AppCompatActivity() {
                 continue
             }
             val value = (minVal..maxVal).random()
-            newBytesByUUID[char.uuid] = byteArrayOf(value.toByte())
+            newBytesByUUID[char.uuid] = byteArrayOf(0b10000000.toByte()) + byteArrayOf((value).toByte())
             char.value = newBytesByUUID[char.uuid]
             Log.d("BLE", "Sending notification ${char.value}")
             val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
