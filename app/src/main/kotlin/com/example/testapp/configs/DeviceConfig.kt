@@ -28,7 +28,7 @@ data class DeviceConfig(
         "characteristics": {
           "heartRate": {
             "name": "Heart Rate",
-            "sensor_uuid": "00002a37-0000-1000-8000-00805f9b34fb",
+            "characteristic_uuid": "00002a37-0000-1000-8000-00805f9b34fb",
             "service_uuid": "0000180d-0000-1000-8000-00805f9b34fb"
           }
         },

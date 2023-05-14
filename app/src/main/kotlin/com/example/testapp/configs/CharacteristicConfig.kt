@@ -7,5 +7,5 @@ import kotlinx.serialization.Serializable
 data class CharacteristicConfig(
     @SerialName("name") val prettyName: String,
     @SerialName("service_uuid") var serviceUuid: String? = null,
-    @SerialName("sensor_uuid") var characteristicUuid: String? = null
+    @SerialName("characteristic_uuid") var characteristicUuid: String? = null
 )

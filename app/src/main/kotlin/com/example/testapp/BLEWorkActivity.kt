@@ -142,6 +142,10 @@ class BLEWorkActivity : AppCompatActivity() {
             fileOutputStream.close()
             if (connectedDevice != null) {
                 gattServer.cancelConnection(connectedDevice)
+                this@BLEWorkActivity.runOnUiThread {
+                    "Имя устройства".also { fastLayout.phoneName.text = it }
+                    "Адрес устройства".also { fastLayout.phoneAddr.text = it }
+                }
             }
             fileExist = true
         } else {
@@ -188,6 +192,11 @@ class BLEWorkActivity : AppCompatActivity() {
             BluetoothGattCharacteristic.PROPERTY_READ or BluetoothGattCharacteristic.PROPERTY_NOTIFY,
             BluetoothGattCharacteristic.PERMISSION_READ,
         )
+        val descriptor = BluetoothGattDescriptor(
+            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
+            BluetoothGattDescriptor.PERMISSION_READ
+        )
+        characteristic.addDescriptor(descriptor)
         service.addCharacteristic(characteristic)
         newBytesByUUID[UUID.fromString(charConfig.characteristicUuid)] = byteArrayOf()
         scope.launch { updateData(characteristic, charKeys[id]) }
@@ -226,13 +235,17 @@ class BLEWorkActivity : AppCompatActivity() {
             Log.d("BLE", "onConnectionStateChange $status -> $newState")
             when(newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
-                    (device?.name ?: "unknown").also { fastLayout.phoneName.text = it }
-                    (device?.address ?: "unknown").also { fastLayout.phoneAddr.text = it }
+                    this@BLEWorkActivity.runOnUiThread {
+                        (device?.name ?: "unknown").also { fastLayout.phoneName.text = it }
+                        (device?.address ?: "unknown").also { fastLayout.phoneAddr.text = it }
+                    }
                     connectedDevice = device
                 }
                 BluetoothProfile.STATE_DISCONNECTED -> {
-                    "Имя устройства".also { fastLayout.phoneName.text = it }
-                    "Адрес устройства".also { fastLayout.phoneAddr.text = it }
+                    this@BLEWorkActivity.runOnUiThread {
+                        "Имя устройства".also { fastLayout.phoneName.text = it }
+                        "Адрес устройства".also { fastLayout.phoneAddr.text = it }
+                    }
                     connectedDevice = null
                 }
             }
@@ -275,9 +288,6 @@ class BLEWorkActivity : AppCompatActivity() {
         override fun onDescriptorReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, descriptor: BluetoothGattDescriptor?) {
             super.onDescriptorReadRequest(device, requestId, offset, descriptor)
             Log.d("BLE", "READ called onDescriptorReadRequest ${descriptor?.uuid ?: "UNDEFINED"}")
-            /**if (descriptor?.uuid == heartRateDescriptorUUID) {
-                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, newValueBytes)
-            }*/
         }
 
         //Callback invoked when a notification or indication has been sent to a remote device.
@@ -355,7 +365,6 @@ class BLEWorkActivity : AppCompatActivity() {
             val value = (minVal..maxVal).random()
             newBytesByUUID[char.uuid] = byteArrayOf(value.toByte())
             char.value = newBytesByUUID[char.uuid]
-            //readCharacteristic.getDescriptor(heartRateDescriptorUUID).value = newValueBytes
             Log.d("BLE", "Sending notification ${char.value}")
             val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
             Log.d("BLE", if (isNotified) { "Notification sent." } else { "Notification is not sent." })
