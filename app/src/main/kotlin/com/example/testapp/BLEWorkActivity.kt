@@ -15,6 +15,7 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.view.WindowManager
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -60,6 +61,7 @@ class BLEWorkActivity : AppCompatActivity() {
         for (param in paramSettings) {
             paramMap[param.paramName] = param
         }
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         scope = CoroutineScope(Dispatchers.Default)
         startServer()
     }
