@@ -39,6 +39,7 @@ import java.io.OutputStreamWriter
 import java.util.*
 
 private const val RUNTIME_PERMISSION_REQUEST_CODE = 2
+private const val CLIENT_CONFIGURATION_DESCRIPTOR_UUID = "00002902-0000-1000-8000-00805f9b34fb"
 
 class BLEWorkActivity : AppCompatActivity() {
     lateinit var fastLayout : BleWorkBinding
@@ -78,6 +79,7 @@ class BLEWorkActivity : AppCompatActivity() {
     private lateinit var gattServer: BluetoothGattServer
     private lateinit var gattTableSettings: DeviceConfig
     private lateinit var charKeys: List<String>
+    private var clientConfigurations: MutableMap<String, ByteArray> = mutableMapOf()
 
     private var connectedDevice: BluetoothDevice? = null
 
@@ -195,7 +197,7 @@ class BLEWorkActivity : AppCompatActivity() {
             BluetoothGattCharacteristic.PERMISSION_READ,
         )
         val descriptor = BluetoothGattDescriptor(
-            UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"),
+            UUID.fromString(CLIENT_CONFIGURATION_DESCRIPTOR_UUID),
             BluetoothGattDescriptor.PERMISSION_READ or BluetoothGattDescriptor.PERMISSION_WRITE
         )
         characteristic.addDescriptor(descriptor)
@@ -292,6 +294,22 @@ class BLEWorkActivity : AppCompatActivity() {
             Log.d("BLE", "READ called onDescriptorReadRequest ${descriptor?.uuid ?: "UNDEFINED"}")
         }
 
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+        override fun onDescriptorWriteRequest(device: BluetoothDevice,
+                                              requestId: Int,
+                                              descriptor: BluetoothGattDescriptor,
+                                              preparedWrite: Boolean,
+                                              responseNeeded: Boolean,
+                                              offset: Int,
+                                              value: ByteArray) {
+            super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
+            if (UUID.fromString(CLIENT_CONFIGURATION_DESCRIPTOR_UUID) == descriptor.uuid) {
+                clientConfigurations[device.address] = value
+                gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+            }
+            Log.d("BLE", "Client ${device.address} write $value to descriptor")
+        }
+
         //Callback invoked when a notification or indication has been sent to a remote device.
         @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -343,6 +361,23 @@ class BLEWorkActivity : AppCompatActivity() {
 
     private fun LocalDateTime.Companion.now() = Clock.System.now().toLocalDateTime(currentSystemDefault())
 
+    private fun clientEnabledNotifications(device: BluetoothDevice, characteristic: BluetoothGattCharacteristic): Boolean {
+        val descriptorList = characteristic.descriptors
+        val descriptor = descriptorList.find { isClientConfigurationDescriptor(it) }
+            ?: // There is no client configuration descriptor, treat as true
+            return true
+        val deviceAddress = device.address
+        val clientConfiguration = clientConfigurations[deviceAddress]
+            ?: // Descriptor has not been set
+            return false
+        return Arrays.equals(clientConfiguration, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+    }
+
+    private fun isClientConfigurationDescriptor(descriptor: BluetoothGattDescriptor?) =
+        descriptor?.let {
+            it.uuid.toString() == CLIENT_CONFIGURATION_DESCRIPTOR_UUID
+        } ?: false
+
     @Suppress("DEPRECATION")
     @RequiresApi(Build.VERSION_CODES.S)
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -368,7 +403,10 @@ class BLEWorkActivity : AppCompatActivity() {
             newBytesByUUID[char.uuid] = byteArrayOf(0b10000000.toByte()) + byteArrayOf((value).toByte())
             char.value = newBytesByUUID[char.uuid]
             Log.d("BLE", "Sending notification ${char.value}")
-            val isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
+            var isNotified = false
+            if (clientEnabledNotifications(connectedDevice!!, char)) {
+                isNotified = gattServer.notifyCharacteristicChanged(connectedDevice, char, false)
+            }
             Log.d("BLE", if (isNotified) { "Notification sent." } else { "Notification is not sent." })
             val time = LocalDateTime.now()
             withContext(Dispatchers.IO) {
