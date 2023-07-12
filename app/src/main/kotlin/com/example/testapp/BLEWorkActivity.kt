@@ -79,7 +79,7 @@ class BLEWorkActivity : AppCompatActivity() {
     private lateinit var gattServer: BluetoothGattServer
     private lateinit var gattTableSettings: DeviceConfig
     private lateinit var charKeys: List<String>
-    private var clientConfigurations: MutableMap<String, ByteArray> = mutableMapOf()
+    private var charConfigurations: MutableMap<BluetoothGattCharacteristic, ByteArray> = mutableMapOf()
 
     private var connectedDevice: BluetoothDevice? = null
 
@@ -289,22 +289,29 @@ class BLEWorkActivity : AppCompatActivity() {
         //A remote client has requested to read a local descriptor.
         @RequiresApi(Build.VERSION_CODES.S)
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        override fun onDescriptorReadRequest(device: BluetoothDevice?, requestId: Int, offset: Int, descriptor: BluetoothGattDescriptor?) {
+        override fun onDescriptorReadRequest(
+            device: BluetoothDevice?,
+            requestId: Int,
+            offset: Int,
+            descriptor: BluetoothGattDescriptor?
+        ) {
             super.onDescriptorReadRequest(device, requestId, offset, descriptor)
             Log.d("BLE", "READ called onDescriptorReadRequest ${descriptor?.uuid ?: "UNDEFINED"}")
         }
 
         @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-        override fun onDescriptorWriteRequest(device: BluetoothDevice,
-                                              requestId: Int,
-                                              descriptor: BluetoothGattDescriptor,
-                                              preparedWrite: Boolean,
-                                              responseNeeded: Boolean,
-                                              offset: Int,
-                                              value: ByteArray) {
+        override fun onDescriptorWriteRequest(
+            device: BluetoothDevice,
+            requestId: Int,
+            descriptor: BluetoothGattDescriptor,
+            preparedWrite: Boolean,
+            responseNeeded: Boolean,
+            offset: Int,
+            value: ByteArray
+        ) {
             super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value)
             if (UUID.fromString(CLIENT_CONFIGURATION_DESCRIPTOR_UUID) == descriptor.uuid) {
-                clientConfigurations[device.address] = value
+                charConfigurations[descriptor.characteristic] = value
                 gattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
             }
             Log.d("BLE", "Client ${device.address} write $value to descriptor")
@@ -366,11 +373,10 @@ class BLEWorkActivity : AppCompatActivity() {
         val descriptor = descriptorList.find { isClientConfigurationDescriptor(it) }
             ?: // There is no client configuration descriptor, treat as true
             return true
-        val deviceAddress = device.address
-        val clientConfiguration = clientConfigurations[deviceAddress]
+        val charConfiguration = charConfigurations[characteristic]
             ?: // Descriptor has not been set
             return false
-        return Arrays.equals(clientConfiguration, BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
+        return Arrays.equals(charConfiguration , BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE)
     }
 
     private fun isClientConfigurationDescriptor(descriptor: BluetoothGattDescriptor?) =
